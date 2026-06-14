@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/28931949/README.md)
+(https://github.com/user-attachments/files/28931949/README.md)
 # CyberSentinel — Threat Intelligence Dashboard
 
 > A premium, production-ready cybersecurity incident and threat intelligence dashboard built on vanilla JavaScript, powered by a Python ML pipeline (Prophet + Isolation Forest).
