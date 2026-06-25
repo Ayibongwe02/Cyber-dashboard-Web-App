@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CyberSentinel — Threat Intelligence Dashboard</title>
+<link rel="stylesheet" href="src/css/main.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <span class="spinner-label">INITIALISING SECURITY PIPELINE…</span>
+</div>
+
+<nav id="sidebar" role="navigation" aria-label="Primary navigation">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">🛡</div>
+    <div class="sidebar-brand-name">CyberSentinel</div>
+    <div class="sidebar-brand-sub">v2.1 · Threat Intelligence</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Monitoring</div>
+    <div class="nav-item active" data-view="overview">
+      <span class="nav-icon">◉</span> Overview
+    </div>
+    <div class="nav-item" data-view="endpoints">
+      <span class="nav-icon">⬡</span> Endpoints
+    </div>
+    <div class="nav-section-label">Intelligence</div>
+    <div class="nav-item" data-view="predictive">
+      <span class="nav-icon">⟁</span> Predictive Engine
+    </div>
+    <div class="nav-item" data-view="hunting">
+      <span class="nav-icon">⦿</span> Threat Hunting
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="status-pill">
+      <div class="pulse-dot"></div>
+      <span id="sidebar-last-sync">LIVE · POLLING</span>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 id="page-title">Security Overview</h1>
+      <p id="page-subtitle">Real-time threat intelligence · Auto-refresh every 60s</p>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-badge" id="kpi-spi-badge">
+        SPI ——
+      </div>
+      <div class="topbar-badge alert" id="critical-badge">
+        ⚠ — CRITICAL
+      </div>
+    </div>
+  </header>
+
+  <!-- VIEW: OVERVIEW -->
+  <section class="view active" id="view-overview">
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Security Posture Index</div>
+        <div class="kpi-value safe" id="kpi-spi">—</div>
+        <div class="kpi-sub" id="kpi-spi-sub">Computing…</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-spi-bar" style="background:var(--sage);width:0%"></div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Blocked Payloads</div>
+        <div class="kpi-value" id="kpi-blocked">—</div>
+        <div class="kpi-sub">Total intercepted this cycle</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="background:var(--blue);width:72%"></div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Active Mitigations</div>
+        <div class="kpi-value warning" id="kpi-mitigations">—</div>
+        <div class="kpi-sub">Automated response actions</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="background:var(--amber);width:58%"></div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">AI Anomaly Rate</div>
+        <div class="kpi-value critical" id="kpi-anomaly">—</div>
+        <div class="kpi-sub" id="kpi-anomaly-sub">Isolation Forest score</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-anomaly-bar" style="background:var(--crimson);width:0%"></div></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card col-span-2">
+        <div class="card-header">
+          <span class="card-title">Live Network Traffic — 24h Window</span>
+          <span class="card-meta">Inbound · Outbound · Blocked (KB)</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-traffic" height="100"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Endpoint Risk Status</span>
+          <span class="card-meta">All hosts</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-endpoint-bar" height="160"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Top Anomalies</span>
+          <span class="card-meta">By classification</span>
+        </div>
+        <div class="card-body">
+          <div class="table-wrap" id="top-anomalies-table"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW: ENDPOINTS -->
+  <section class="view" id="view-endpoints">
+    <div class="endpoint-status-grid" id="endpoint-status-grid"></div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" id="ep-title">Select an endpoint</span>
+        <span class="card-meta" id="ep-meta"></span>
+      </div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div>
+            <div class="chart-wrap"><canvas id="chart-endpoint-detail" height="180"></canvas></div>
+          </div>
+          <div>
+            <div class="kpi-label" style="margin-bottom:10px">RAW SYSTEM LOG</div>
+            <div class="log-wrap" id="ep-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW: PREDICTIVE ENGINE -->
+  <section class="view" id="view-predictive">
+    <div class="metric-row" id="pred-metrics"></div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title">Prophet Volumetric Forecast — Packet Payload Trend</span>
+        <span class="card-meta">95% CI bands · Weekly resolution</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chart-forecast" height="110"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Model Validation Table</span>
+        <span class="card-meta">Prophet evaluation block · Last 8 periods</span>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap" id="forecast-table"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW: THREAT HUNTING -->
+  <section class="view" id="view-hunting">
+    <div class="filter-bar" id="hunting-filters"></div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">AI Behavioral Threat Log — Isolation Forest</span>
+        <span class="card-meta" id="hunting-count">Loading…</span>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap" id="hunting-table"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="src/js/app.js"></script>
+</body>
+</html>
